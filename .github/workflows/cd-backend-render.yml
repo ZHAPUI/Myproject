@@ -2,7 +2,7 @@ name: CD - Backend to Render (demo2-import)
 
 on:
   push:
-    branches: [ demo2-import ]
+    branches: [ main ]
 
 jobs:
   deploy:

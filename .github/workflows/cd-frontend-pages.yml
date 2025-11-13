@@ -2,7 +2,7 @@ name: CD - Frontend to GitHub Pages (demo2-import + smart paths)
 
 on:
   push:
-    branches: [ demo2-import ]
+    branches: [main ]
     paths:
       - 'capstone-frontend/**'
       - '.github/workflows/cd-frontend-pages.yml'

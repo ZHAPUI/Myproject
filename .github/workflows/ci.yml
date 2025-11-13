@@ -2,7 +2,7 @@ name: CI - FE Build & BE Smoke (smart + npm install)
 
 on:
   push:
-    branches: [ demo2-import ]
+    branches: [ main ]
   pull_request:
     branches: [ main, demo2-import ]
 
