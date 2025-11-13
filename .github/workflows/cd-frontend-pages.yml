@@ -1,0 +1,57 @@
+name: CD - Frontend to GitHub Pages (demo2-import + smart paths)
+
+on:
+  push:
+    branches: [ demo2-import ]
+    paths:
+      - 'capstone-frontend/**'
+      - '.github/workflows/cd-frontend-pages.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # ✅ 关键：声明 Pages 环境
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    permissions:
+      contents: read
+      pages: write     # ✅ 需要写 pages
+      id-token: write  # ✅ OIDC token
+
+    concurrency:
+      group: "pages"
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install deps
+        working-directory: capstone-frontend
+        run: npm install
+
+      - name: Build (Vite) & SPA 404 fallback
+        working-directory: capstone-frontend
+        env:
+          GITHUB_PAGES: "true"
+        run: |
+          npm run build
+          cp dist/index.html dist/404.html || true
+          ls -lah dist
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: capstone-frontend/dist
+
+      # ✅ 给这个 step 一个 id，用来把页面 URL 传给上面的 environment.url
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
