@@ -10,7 +10,7 @@ import uuid
 import logging
 import models, schemas, crud
 from database import SessionLocal, engine, Base
-
+from pathlib import Path
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -48,8 +48,16 @@ def _discover_default_story_path() -> Path:
     )
 
 
-_default_story_json_path = _discover_default_story_path()
-STORY_JSON_PATH = Path(os.getenv("STORY_JSON_PATH", _default_story_json_path))
+env_story = os.getenv("STORY_JSON_PATH")
+
+if env_story:
+    # 部署环境（Render）：优先用环境变量里明确指定的路径
+    STORY_JSON_PATH = Path(env_story)
+else:
+    # 本地开发：没设置环境变量时，继续用原来的自动发现逻辑
+    _default_story_json_path = _discover_default_story_path()
+    STORY_JSON_PATH = Path(_default_story_json_path)
+
 PUBLIC_DIR = STORY_JSON_PATH.parent
 
 
