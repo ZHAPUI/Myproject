@@ -1,0 +1,17 @@
+# Frontend dependencies
+capstone-frontend/node_modules/
+capstone-frontend/.next/
+capstone-frontend/dist/
+capstone-frontend/.turbo/
+capstone-frontend/.vite/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE/editor
+.vscode/
+.idea/
+.DS_Store
