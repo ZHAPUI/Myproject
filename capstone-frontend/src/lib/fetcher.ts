@@ -5,16 +5,17 @@ import { Story } from './types';
 // 如果当前是 localhost，就用 localhost:8888
 // 否则使用当前主机名（适合同一局域网内的其他设备访问）
 const getApiBaseUrl = () => {
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
-  
+  const isLocalhost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1';
+
   if (isLocalhost) {
+    // 本地开发：连你本机 8888 端口
     return 'http://localhost:8888';
-  } else {
-    // 使用当前页面的 hostname，端口 8888
-    // 例如：如果通过 192.168.1.100:5173 访问，API 就是 http://192.168.1.100:8888
-    return `${window.location.protocol}//${window.location.hostname}:8888`;
   }
+
+  // 线上环境（GitHub Pages 等）：连 Render 后端
+  return 'https://myproject-pkrn.onrender.com';
 };
 
 const API_BASE_URL = getApiBaseUrl();
