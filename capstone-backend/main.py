@@ -10,7 +10,7 @@ import uuid
 import logging
 import models, schemas, crud
 from database import SessionLocal, engine, Base
-from pathlib import Path
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -33,31 +33,25 @@ def _discover_default_story_path() -> Path:
         backend_dir / "public",
     ]
 
+    # 如果这些目录里已经有 story.json，就直接用
     for public_dir in candidate_public_dirs:
         story_path = public_dir / "story.json"
         if story_path.exists():
             return story_path
 
+    # 如果目录存在但还没有 story.json，就先返回一个“将来会放在这里”的路径
     for public_dir in candidate_public_dirs:
         if public_dir.is_dir():
             return public_dir / "story.json"
 
-    raise FileNotFoundError(
-        "Unable to locate story.json automatically. "
-        "Set STORY_JSON_PATH environment variable to the desired file."
-    )
+    # ✅ 最后兜底：即使啥都没有，也别报错，直接指向 backend_dir/public/story.json
+    # 后面代码在写文件前会用 STORY_JSON_PATH.exists() 做检查，不会因为不存在就崩溃
+    return backend_dir / "public" / "story.json"
 
 
-env_story = os.getenv("STORY_JSON_PATH")
 
-if env_story:
-    # 部署环境（Render）：优先用环境变量里明确指定的路径
-    STORY_JSON_PATH = Path(env_story)
-else:
-    # 本地开发：没设置环境变量时，继续用原来的自动发现逻辑
-    _default_story_json_path = _discover_default_story_path()
-    STORY_JSON_PATH = Path(_default_story_json_path)
-
+_default_story_json_path = _discover_default_story_path()
+STORY_JSON_PATH = Path(os.getenv("STORY_JSON_PATH", _default_story_json_path))
 PUBLIC_DIR = STORY_JSON_PATH.parent
 
 
@@ -209,6 +203,14 @@ def get_story(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No story found")
 
     return build_story_payload(story)
+
+@app.patch("/story/{story_id}")
+def update_story(story_id: int, payload: schemas.StoryUpdate, db: Session = Depends(get_db)):
+    updated = crud.update_story(db, story_id, payload)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Story not found")
+    sync_story_json(db, story_id)
+    return build_story_payload(updated)
 
 # Optional: Import story.json from the frontend and convert sections into posts
 @app.post("/import/story", response_model=List[schemas.PostRead])

@@ -43,6 +43,9 @@ class StoryBase(BaseModel):
 class StoryCreate(StoryBase):
     sections: List[SectionCreate] = []
 
+class StoryUpdate(StoryBase):
+    pass
+
 class StoryRead(StoryBase):
     id: int
     created_at: Optional[datetime] = None

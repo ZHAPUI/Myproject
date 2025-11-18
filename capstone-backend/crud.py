@@ -3,6 +3,23 @@ from typing import Optional
 import models, schemas
 import json
 
+def reorder_sections(db: Session, story_id: int, moving_section: Optional[models.Section] = None, target_index: Optional[int] = None):
+    """Rebuild sequential sort_order, optionally inserting a moving section at target_index."""
+    sections = (
+        db.query(models.Section)
+        .filter(models.Section.story_id == story_id)
+        .order_by(models.Section.sort_order.asc(), models.Section.id.asc())
+        .all()
+    )
+    if moving_section:
+        sections = [s for s in sections if s.id != moving_section.id]
+        insert_at = 0 if target_index is None else max(0, int(target_index))
+        insert_at = min(insert_at, len(sections))
+        sections.insert(insert_at, moving_section)
+    for idx, section in enumerate(sections):
+        if section.sort_order != idx:
+            section.sort_order = idx
+
 def create_post(db: Session, post: schemas.PostCreate) -> models.Post:
     db_post = models.Post(title=post.title, content=post.content, author=post.author, created_at=post.created_at or None)
     db.add(db_post)
@@ -116,6 +133,24 @@ def delete_story(db: Session, story_id: int) -> bool:
     db.commit()
     return True
 
+def update_story(db: Session, story_id: int, payload: schemas.StoryUpdate) -> Optional[models.Story]:
+    story = get_story(db, story_id)
+    if not story:
+        return None
+    if payload.title is not None:
+        story.title = payload.title
+    if payload.version is not None:
+        story.version = payload.version
+    if payload.standfirst is not None:
+        story.standfirst = payload.standfirst
+    if payload.theme_font is not None:
+        story.theme_font = payload.theme_font
+    if payload.theme_primary_color is not None:
+        story.theme_primary_color = payload.theme_primary_color
+    db.commit()
+    db.refresh(story)
+    return story
+
 # Section CRUD
 def get_sections(db: Session, story_id: Optional[int] = None, skip: int = 0, limit: int = 100):
     query = db.query(models.Section)
@@ -134,6 +169,8 @@ def create_section(db: Session, section: schemas.SectionCreate, story_id: int) -
         sort_order=section.sort_order
     )
     db.add(db_section)
+    db.flush()
+    reorder_sections(db, story_id, db_section, section.sort_order)
     db.commit()
     db.refresh(db_section)
     return db_section
@@ -148,6 +185,10 @@ def update_section(db: Session, section_id: int, section_type: str = None, data:
         section.data = data
     if sort_order is not None:
         section.sort_order = sort_order
+        db.flush()
+        reorder_sections(db, section.story_id, section, sort_order)
+    else:
+        db.flush()
     db.commit()
     db.refresh(section)
     return section
@@ -158,6 +199,7 @@ def delete_section(db: Session, section_id: int) -> Optional[int]:
         return None
     story_id = section.story_id
     db.delete(section)
+    db.flush()
+    reorder_sections(db, story_id)
     db.commit()
     return story_id
-
